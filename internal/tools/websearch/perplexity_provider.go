@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -43,6 +44,10 @@ func (d *perplexityDriver) Search(ctx context.Context, req SearchRequest, cfg Pr
 	httpReq.Header.Set("Authorization", "Bearer "+cfg.APIKey)
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "application/json")
+	if isPerplexityAPIHost(baseURL) {
+		// Identifies GoClaw traffic to Perplexity; not sent to custom base URLs.
+		httpReq.Header.Set("X-Pplx-Integration", "goclaw")
+	}
 
 	resp, err := newHTTPClient(45).Do(httpReq)
 	if err != nil {
@@ -83,4 +88,9 @@ func (d *perplexityDriver) Search(ctx context.Context, req SearchRequest, cfg Pr
 		Answer:    answer,
 		Citations: parsed.Citations,
 	}, nil
+}
+
+func isPerplexityAPIHost(baseURL string) bool {
+	u, err := url.Parse(baseURL)
+	return err == nil && strings.EqualFold(u.Hostname(), "api.perplexity.ai")
 }
